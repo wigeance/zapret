@@ -353,8 +353,8 @@ jobs:
                 *-linux-x86 )      run_dir x86 ;;
                 *-linux-x86_64 )   run_dir x86_64 ;;
                 *-mac-x64 )        run_dir mac64 ;;
-                *-win-x86 )        run_dir win32 ;;
-                *-win-x86_64 )     run_dir win64 ;;
+                ##*-win-x86 )        run_dir win32 ;;
+                ##*-win-x86_64 )     run_dir win64 ;;
               esac
             fi
           done
