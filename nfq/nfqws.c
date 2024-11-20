@@ -1544,9 +1544,9 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 21: /* dpi-desync-repeats */
-			if (sscanf(optarg,"%u",&dp->desync_repeats)<1 || !dp->desync_repeats || dp->desync_repeats>1000)
+			if (sscanf(optarg,"%u",&dp->desync_repeats)<1 || !dp->desync_repeats || dp->desync_repeats>100)
 			{
-				DLOG_ERR("dpi-desync-repeats must be within 1..1000\n");
+				DLOG_ERR("dpi-desync-repeats must be within 1..100\n");
 				exit_clean(1);
 			}
 			break;
