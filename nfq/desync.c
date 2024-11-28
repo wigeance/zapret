@@ -1796,14 +1796,16 @@ static uint8_t dpi_desync_udp_packet_play(bool replay, size_t reasm_offset, uint
 
 		if (IsQUICInitial(dis->data_payload,dis->len_payload))
 		{
+			ctrack_stop_retrans_counter(ctrack);
+			
+			reasm_orig_cancel(ctrack);
+			
 			DLOG("packet contains QUIC initial\n");
 			l7proto = QUIC;
 			if (ctrack && ctrack->l7proto==UNKNOWN) ctrack->l7proto = l7proto;
 
-			uint8_t clean[16384], *pclean;
-			size_t clean_len;
-
-			if (!quic_reasm_cancel(ctrack,"QUIC initial reassembly is canceled manualy!!!")) return verdict;
+			//uint8_t clean[16384], *pclean;
+			//size_t clean_len;
 
 			//if (replay)
 			//{
