@@ -904,73 +904,73 @@ static uint8_t dpi_desync_tcp_packet_play(bool replay, size_t reasm_offset, uint
 				}
 			}
 		}
-//		else if (IsTLSClientHello(rdata_payload,rlen_payload,TLS_PARTIALS_ENABLE))
-//		{
-//			bool bReqFull = IsTLSRecordFull(rdata_payload,rlen_payload);
-//			DLOG(bReqFull ? "packet contains full TLS ClientHello\n" : "packet contains partial TLS ClientHello\n");
-//			l7proto = TLS;
-//
-//			bHaveHost=TLSHelloExtractHost(rdata_payload,rlen_payload,host,sizeof(host),TLS_PARTIALS_ENABLE);
-//
-//			if (ctrack)
-//			{
-//				if (!ctrack->l7proto) ctrack->l7proto = l7proto;
-//				// do not reasm retransmissions
-//				if (!bReqFull && ReasmIsEmpty(&ctrack->reasm_orig) && !ctrack->req_seq_abandoned &&
-//					!(ctrack->req_seq_finalized && seq_within(ctrack->seq_last, ctrack->req_seq_start, ctrack->req_seq_end)))
-//				{
-//					// do not reconstruct unexpected large payload (they are feeding garbage ?)
-//					if (!reasm_orig_start(ctrack,IPPROTO_TCP,TLSRecordLen(dis->data_payload),16384,dis->data_payload,dis->len_payload))
-//					{
-//						reasm_orig_cancel(ctrack);
-//						return verdict;
-//					}
-//				}
-//				if (!ctrack->req_seq_finalized)
-//				{
-//					if (!ctrack->req_seq_present)
-//					{
-//						// lower bound of request seq interval
-//						ctrack->req_seq_start=ctrack->seq_last;
-//						ctrack->req_seq_present=true;
-//					}
+		else if (IsTLSClientHello(rdata_payload,rlen_payload,TLS_PARTIALS_ENABLE))
+		{
+			bool bReqFull = IsTLSRecordFull(rdata_payload,rlen_payload);
+			DLOG(bReqFull ? "packet contains full TLS ClientHello\n" : "packet contains partial TLS ClientHello\n");
+			l7proto = TLS;
+
+			bHaveHost=TLSHelloExtractHost(rdata_payload,rlen_payload,host,sizeof(host),TLS_PARTIALS_ENABLE);
+
+			if (ctrack)
+			{
+				if (!ctrack->l7proto) ctrack->l7proto = l7proto;
+				// do not reasm retransmissions
+				if (!bReqFull && ReasmIsEmpty(&ctrack->reasm_orig) && !ctrack->req_seq_abandoned &&
+					!(ctrack->req_seq_finalized && seq_within(ctrack->seq_last, ctrack->req_seq_start, ctrack->req_seq_end)))
+				{
+					// do not reconstruct unexpected large payload (they are feeding garbage ?)
+					if (!reasm_orig_start(ctrack,IPPROTO_TCP,TLSRecordLen(dis->data_payload),16384,dis->data_payload,dis->len_payload))
+					{
+						reasm_orig_cancel(ctrack);
+						return verdict;
+					}
+				}
+				if (!ctrack->req_seq_finalized)
+				{
+					if (!ctrack->req_seq_present)
+					{
+						// lower bound of request seq interval
+						ctrack->req_seq_start=ctrack->seq_last;
+						ctrack->req_seq_present=true;
+					}
 					// upper bound of request seq interval
 					// it can grow on every packet until request is complete. then interval is finalized and never touched again.
-//					ctrack->req_seq_end=ctrack->pos_orig-1;
-//					DLOG("req retrans : seq interval %u-%u\n",ctrack->req_seq_start,ctrack->req_seq_end);
-//					ctrack->req_seq_finalized |= bReqFull;
-//				}
-//				if (bReqFull || ReasmIsEmpty(&ctrack->reasm_orig)) forced_wssize_cutoff(ctrack);
-//
-//				if (!ReasmIsEmpty(&ctrack->reasm_orig))
-//				{
-//					verdict_tcp_csum_fix(verdict, dis->tcp, dis->transport_len, dis->ip, dis->ip6);
-//					if (rawpacket_queue(&ctrack->delayed, &dst, desync_fwmark, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload))
-//					{
-//						DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
-//					}
-//					else
-//					{
-//						DLOG_ERR("rawpacket_queue failed !\n");
-//						reasm_orig_cancel(ctrack);
-//						return verdict;
-//					}
-//					if (ReasmIsFull(&ctrack->reasm_orig))
-//					{
-//						replay_queue(&ctrack->delayed);
-//						reasm_orig_fin(ctrack);
-//					}
-//					return VERDICT_DROP;
-//				}
-//			}
-//
-//			if (dp->desync_skip_nosni && !bHaveHost)
-//			{
-//				DLOG("not applying tampering to TLS ClientHello without hostname in the SNI\n");
-//				reasm_orig_cancel(ctrack);
-//				return verdict;
-//			}
-//		}
+					ctrack->req_seq_end=ctrack->pos_orig-1;
+					DLOG("req retrans : seq interval %u-%u\n",ctrack->req_seq_start,ctrack->req_seq_end);
+					ctrack->req_seq_finalized |= bReqFull;
+				}
+				if (bReqFull || ReasmIsEmpty(&ctrack->reasm_orig)) forced_wssize_cutoff(ctrack);
+
+				if (!ReasmIsEmpty(&ctrack->reasm_orig))
+				{
+					verdict_tcp_csum_fix(verdict, dis->tcp, dis->transport_len, dis->ip, dis->ip6);
+					if (rawpacket_queue(&ctrack->delayed, &dst, desync_fwmark, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload))
+					{
+						DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
+					}
+					else
+					{
+						DLOG_ERR("rawpacket_queue failed !\n");
+						reasm_orig_cancel(ctrack);
+						return verdict;
+					}
+					if (ReasmIsFull(&ctrack->reasm_orig))
+					{
+						replay_queue(&ctrack->delayed);
+						reasm_orig_fin(ctrack);
+					}
+					return VERDICT_DROP;
+				}
+			}
+
+			if (dp->desync_skip_nosni && !bHaveHost)
+			{
+				DLOG("not applying tampering to TLS ClientHello without hostname in the SNI\n");
+				reasm_orig_cancel(ctrack);
+				return verdict;
+			}
+		}
 
 		if (ctrack && ctrack->req_seq_finalized)
 		{
