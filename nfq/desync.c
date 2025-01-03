@@ -897,73 +897,73 @@ static uint8_t dpi_desync_tcp_packet_play(bool replay, size_t reasm_offset, uint
 				}
 			}
 		}
-		else if (IsTLSClientHello(rdata_payload,rlen_payload,TLS_PARTIALS_ENABLE))
-		{
-			bool bReqFull = IsTLSRecordFull(rdata_payload,rlen_payload);
-			DLOG(bReqFull ? "packet contains full TLS ClientHello\n" : "packet contains partial TLS ClientHello\n");
-			l7proto = TLS;
-
-			bHaveHost=TLSHelloExtractHost(rdata_payload,rlen_payload,host,sizeof(host),TLS_PARTIALS_ENABLE);
-
-			if (ctrack)
-			{
-				if (!ctrack->l7proto) ctrack->l7proto = l7proto;
-				// do not reasm retransmissions
-				if (!bReqFull && ReasmIsEmpty(&ctrack->reasm_orig) && !ctrack->req_seq_abandoned &&
-					!(ctrack->req_seq_finalized && seq_within(ctrack->seq_last, ctrack->req_seq_start, ctrack->req_seq_end)))
-				{
-					// do not reconstruct unexpected large payload (they are feeding garbage ?)
-					if (!reasm_orig_start(ctrack,IPPROTO_TCP,TLSRecordLen(dis->data_payload),16384,dis->data_payload,dis->len_payload))
-					{
-						reasm_orig_cancel(ctrack);
-						return verdict;
-					}
-				}
-				if (!ctrack->req_seq_finalized)
-				{
-					if (!ctrack->req_seq_present)
-					{
-						// lower bound of request seq interval
-						ctrack->req_seq_start=ctrack->seq_last;
-						ctrack->req_seq_present=true;
-					}
-					// upper bound of request seq interval
-					// it can grow on every packet until request is complete. then interval is finalized and never touched again.
-					ctrack->req_seq_end=ctrack->pos_orig-1;
-					DLOG("req retrans : seq interval %u-%u\n",ctrack->req_seq_start,ctrack->req_seq_end);
-					ctrack->req_seq_finalized |= bReqFull;
-				}
-				if (bReqFull || ReasmIsEmpty(&ctrack->reasm_orig)) forced_wssize_cutoff(ctrack);
-
-				if (!ReasmIsEmpty(&ctrack->reasm_orig))
-				{
-					verdict_tcp_csum_fix(verdict, dis->tcp, dis->transport_len, dis->ip, dis->ip6);
-					if (rawpacket_queue(&ctrack->delayed, &dst, desync_fwmark, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload))
-					{
-						DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
-					}
-					else
-					{
-						DLOG_ERR("rawpacket_queue failed !\n");
-						reasm_orig_cancel(ctrack);
-						return verdict;
-					}
-					if (ReasmIsFull(&ctrack->reasm_orig))
-					{
-						replay_queue(&ctrack->delayed);
-						reasm_orig_fin(ctrack);
-					}
-					return VERDICT_DROP;
-				}
-			}
-
-			if (dp->desync_skip_nosni && !bHaveHost)
-			{
-				DLOG("not applying tampering to TLS ClientHello without hostname in the SNI\n");
-				reasm_orig_cancel(ctrack);
-				return verdict;
-			}
-		}
+//		else if (IsTLSClientHello(rdata_payload,rlen_payload,TLS_PARTIALS_ENABLE))
+//		{
+//			bool bReqFull = IsTLSRecordFull(rdata_payload,rlen_payload);
+//			DLOG(bReqFull ? "packet contains full TLS ClientHello\n" : "packet contains partial TLS ClientHello\n");
+//			l7proto = TLS;
+//
+//			bHaveHost=TLSHelloExtractHost(rdata_payload,rlen_payload,host,sizeof(host),TLS_PARTIALS_ENABLE);
+//
+//			if (ctrack)
+//			{
+//				if (!ctrack->l7proto) ctrack->l7proto = l7proto;
+//				// do not reasm retransmissions
+//				if (!bReqFull && ReasmIsEmpty(&ctrack->reasm_orig) && !ctrack->req_seq_abandoned &&
+//					!(ctrack->req_seq_finalized && seq_within(ctrack->seq_last, ctrack->req_seq_start, ctrack->req_seq_end)))
+//				{
+//					// do not reconstruct unexpected large payload (they are feeding garbage ?)
+//					if (!reasm_orig_start(ctrack,IPPROTO_TCP,TLSRecordLen(dis->data_payload),16384,dis->data_payload,dis->len_payload))
+//					{
+//						reasm_orig_cancel(ctrack);
+//						return verdict;
+//					}
+//				}
+//				if (!ctrack->req_seq_finalized)
+//				{
+//					if (!ctrack->req_seq_present)
+//					{
+//						// lower bound of request seq interval
+//						ctrack->req_seq_start=ctrack->seq_last;
+//						ctrack->req_seq_present=true;
+//					}
+//					// upper bound of request seq interval
+//					// it can grow on every packet until request is complete. then interval is finalized and never touched again.
+//					ctrack->req_seq_end=ctrack->pos_orig-1;
+//					DLOG("req retrans : seq interval %u-%u\n",ctrack->req_seq_start,ctrack->req_seq_end);
+//					ctrack->req_seq_finalized |= bReqFull;
+//				}
+//				if (bReqFull || ReasmIsEmpty(&ctrack->reasm_orig)) forced_wssize_cutoff(ctrack);
+//
+//				if (!ReasmIsEmpty(&ctrack->reasm_orig))
+//				{
+//					verdict_tcp_csum_fix(verdict, dis->tcp, dis->transport_len, dis->ip, dis->ip6);
+//					if (rawpacket_queue(&ctrack->delayed, &dst, desync_fwmark, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload))
+//					{
+//						DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
+//					}
+//					else
+//					{
+//						DLOG_ERR("rawpacket_queue failed !\n");
+//						reasm_orig_cancel(ctrack);
+//						return verdict;
+//					}
+//					if (ReasmIsFull(&ctrack->reasm_orig))
+//					{
+//						replay_queue(&ctrack->delayed);
+//						reasm_orig_fin(ctrack);
+//					}
+//					return VERDICT_DROP;
+//				}
+//			}
+//
+//			if (dp->desync_skip_nosni && !bHaveHost)
+//			{
+//				DLOG("not applying tampering to TLS ClientHello without hostname in the SNI\n");
+//				reasm_orig_cancel(ctrack);
+//				return verdict;
+//			}
+//		}
 
 		if (ctrack && ctrack->req_seq_finalized)
 		{
@@ -1844,109 +1844,113 @@ static uint8_t dpi_desync_udp_packet_play(bool replay, size_t reasm_offset, uint
 
 		if (IsQUICInitial(dis->data_payload,dis->len_payload))
 		{
+			ctrack_stop_retrans_counter(ctrack);
+			
+			reasm_orig_cancel(ctrack);
+
 			DLOG("packet contains QUIC initial\n");
 			l7proto = QUIC;
 			if (ctrack && ctrack->l7proto==UNKNOWN) ctrack->l7proto = l7proto;
 
-			uint8_t clean[16384], *pclean;
-			size_t clean_len;
+//			uint8_t clean[16384], *pclean;
+//			size_t clean_len;
 
-			if (replay)
-			{
-				clean_len = ctrack_replay->reasm_orig.size_present;
-				pclean = ctrack_replay->reasm_orig.packet;
-			}
-			else
-			{
-				clean_len = sizeof(clean);
-				pclean = QUICDecryptInitial(dis->data_payload,dis->len_payload,clean,&clean_len) ? clean : NULL;
-			}
-			if (pclean)
-			{
-				if (ctrack && !ReasmIsEmpty(&ctrack->reasm_orig))
-				{
-					if (ReasmHasSpace(&ctrack->reasm_orig, clean_len))
-					{
-						reasm_orig_feed(ctrack,IPPROTO_UDP,clean,clean_len);
-						pclean = ctrack->reasm_orig.packet;
-						clean_len = ctrack->reasm_orig.size_present;
-					}
-					else
-					{
-						DLOG("QUIC reasm is too long. cancelling.\n");
-						reasm_orig_cancel(ctrack);
-						return verdict; // cannot be first packet
-					}
-				}
-
-				uint8_t defrag[16384];
-				size_t hello_offset, hello_len, defrag_len = sizeof(defrag);
-				if (QUICDefragCrypto(pclean,clean_len,defrag,&defrag_len))
-				{
-					bool bIsHello = IsQUICCryptoHello(defrag, defrag_len, &hello_offset, &hello_len);
-					bool bReqFull = bIsHello ? IsTLSHandshakeFull(defrag+hello_offset,hello_len) : false;
-
-					DLOG(bIsHello ? bReqFull ? "packet contains full TLS ClientHello\n" : "packet contains partial TLS ClientHello\n" : "packet does not contain TLS ClientHello\n");
-
-					if (ctrack)
-					{
-						if (bIsHello && !bReqFull && ReasmIsEmpty(&ctrack->reasm_orig))
-						{
-							// preallocate max buffer to avoid reallocs that cause memory copy
-							if (!reasm_orig_start(ctrack,IPPROTO_UDP,16384,16384,clean,clean_len))
-							{
-								reasm_orig_cancel(ctrack);
-								return verdict;
-							}
-						}
-						if (!ReasmIsEmpty(&ctrack->reasm_orig))
-						{
-							verdict_udp_csum_fix(verdict, dis->udp, dis->transport_len, dis->ip, dis->ip6);
-							if (rawpacket_queue(&ctrack->delayed, &dst, desync_fwmark, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload))
-							{
-								DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
-							}
-							else
-							{
-								DLOG_ERR("rawpacket_queue failed !\n");
-								reasm_orig_cancel(ctrack);
-								return verdict;
-							}
-							if (bReqFull)
-							{
-								replay_queue(&ctrack->delayed);
-								reasm_orig_fin(ctrack);
-							}
-							return ct_new_postnat_fix_udp(ctrack, dis->ip, dis->ip6, dis->udp, &dis->len_pkt);
-						}
-					}
-			
-					if (bIsHello)
-					{
-						bHaveHost = TLSHelloExtractHostFromHandshake(defrag + hello_offset, hello_len, host, sizeof(host), TLS_PARTIALS_ENABLE);
-						if (!bHaveHost && dp->desync_skip_nosni)
-						{
-							reasm_orig_cancel(ctrack);
-							DLOG("not applying tampering to QUIC ClientHello without hostname in the SNI\n");
-							return verdict;
-						}
-					}
-					else
-					{
-						if (!quic_reasm_cancel(ctrack,"QUIC initial without ClientHello")) return verdict;
-					}
-				}
-				else
-				{
-					// defrag failed
-					if (!quic_reasm_cancel(ctrack,"QUIC initial defrag CRYPTO failed")) return verdict;
-				}
-			}
-			else
-			{
-				// decrypt failed
-				if (!quic_reasm_cancel(ctrack,"QUIC initial decryption failed")) return verdict;
-			}
+//			if (replay)
+//			{
+//				clean_len = ctrack_replay->reasm_orig.size_present;
+//				pclean = ctrack_replay->reasm_orig.packet;
+//			}
+//			else
+//			{
+//				clean_len = sizeof(clean);
+//				pclean = QUICDecryptInitial(dis->data_payload,dis->len_payload,clean,&clean_len) ? clean : NULL;
+//			}
+//			if (pclean)
+//			{
+//				if (ctrack && !ReasmIsEmpty(&ctrack->reasm_orig))
+//				{
+//					if (ReasmHasSpace(&ctrack->reasm_orig, clean_len))
+//					{
+//						reasm_orig_feed(ctrack,IPPROTO_UDP,clean,clean_len);
+//						pclean = ctrack->reasm_orig.packet;
+//						clean_len = ctrack->reasm_orig.size_present;
+//					}
+//					else
+//					{
+//						DLOG("QUIC reasm is too long. cancelling.\n");
+//						reasm_orig_cancel(ctrack);
+//						return verdict; // cannot be first packet
+//					}
+//				}
+//
+//				uint8_t defrag[16384];
+//				size_t hello_offset, hello_len, defrag_len = sizeof(defrag);
+//				if (QUICDefragCrypto(pclean,clean_len,defrag,&defrag_len))
+//				{
+//					bool bIsHello = IsQUICCryptoHello(defrag, defrag_len, &hello_offset, &hello_len);
+//					bool bReqFull = bIsHello ? IsTLSHandshakeFull(defrag+hello_offset,hello_len) : false;
+//
+//					DLOG(bIsHello ? bReqFull ? "packet contains full TLS ClientHello\n" : "packet contains partial TLS ClientHello\n" : "packet does not contain TLS ClientHello\n");
+//
+//					if (ctrack)
+//					{
+//						if (bIsHello && !bReqFull && ReasmIsEmpty(&ctrack->reasm_orig))
+//						{
+//							// preallocate max buffer to avoid reallocs that cause memory copy
+//							if (!reasm_orig_start(ctrack,IPPROTO_UDP,16384,16384,clean,clean_len))
+//							{
+//								reasm_orig_cancel(ctrack);
+//								return verdict;
+//							}
+//						}
+//						if (!ReasmIsEmpty(&ctrack->reasm_orig))
+//						{
+//							verdict_udp_csum_fix(verdict, dis->udp, dis->transport_len, dis->ip, dis->ip6);
+//							if (rawpacket_queue(&ctrack->delayed, &dst, desync_fwmark, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload))
+//							{
+//								DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
+//							}
+//							else
+//							{
+//								DLOG_ERR("rawpacket_queue failed !\n");
+//								reasm_orig_cancel(ctrack);
+//								return verdict;
+//							}
+//							if (bReqFull)
+//							{
+//								replay_queue(&ctrack->delayed);
+//								reasm_orig_fin(ctrack);
+//							}
+//							return ct_new_postnat_fix_udp(ctrack, dis->ip, dis->ip6, dis->udp, &dis->len_pkt);
+//						}
+//					}
+//			
+//					if (bIsHello)
+//					{
+//						bHaveHost = TLSHelloExtractHostFromHandshake(defrag + hello_offset, hello_len, host, sizeof(host), TLS_PARTIALS_ENABLE);
+//						if (!bHaveHost && dp->desync_skip_nosni)
+//						{
+//							reasm_orig_cancel(ctrack);
+//							DLOG("not applying tampering to QUIC ClientHello without hostname in the SNI\n");
+//							return verdict;
+//						}
+//					}
+//					else
+//					{
+//						if (!quic_reasm_cancel(ctrack,"QUIC initial without ClientHello")) return verdict;
+//					}
+//				}
+//				else
+//				{
+//					// defrag failed
+//					if (!quic_reasm_cancel(ctrack,"QUIC initial defrag CRYPTO failed")) return verdict;
+//				}
+//			}
+//			else
+//			{
+//				// decrypt failed
+//				if (!quic_reasm_cancel(ctrack,"QUIC initial decryption failed")) return verdict;
+//			}
 		}
 		else // not QUIC initial
 		{
