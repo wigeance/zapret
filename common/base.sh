@@ -419,9 +419,9 @@ check_bad_ws_options()
 	# $1 - 0 = stop, 1 = start
 	# $2 - nfqws/tpws options
 	if [ "$1" = 1 ] && has_bad_ws_options "$2"; then
-		echo "!!! REFUSING TO USE BAD OPTIONS : $2"
+		echo "!!! USING BAD OPTIONS : $2"
 		help_bad_ws_options
-		return 1
+		return 0
 	else
 		return 0
 	fi
