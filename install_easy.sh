@@ -53,21 +53,24 @@ check_readonly_system()
 check_source()
 {
 	local bad=0
+
 	echo \* checking source files
-        case $SYSTEM in
+	case $SYSTEM in
 		systemd)
 			[ -f "$EXEDIR/init.d/systemd/zapret.service" ] || bad=1
 			;;
 		openrc)
 			[ -f "$EXEDIR/init.d/openrc/zapret" ] || bad=1
 			;;
-		*)
-	esac
-	[ "$bad" = 1 ] && {
-		echo 'some critical files are missing'
-		echo 'are you sure you are not using embedded release ? you need full version for traditional linux'
-		exitp 5
-	}
+		macos)
+			[ -f "$EXEDIR/init.d/macos/zapret" ] || bad=1
+			;;
+       esac
+       [ "$bad" = 1 ] && {
+               echo 'some critical files are missing'
+               echo 'are you sure you are not using embedded release ? you need full version for traditional systems'
+               exitp 5
+       }
 }
 
 check_bins()
@@ -77,6 +80,7 @@ check_bins()
 	fix_perms_bin_test "$EXEDIR"
 	local arch="$(get_bin_arch)"
 	local make_target
+	local cf="-march=native"
 	[ "$FORCE_BUILD" = "1" ] && {
 		echo forced build mode
 		if [ "$arch" = "my" ]; then
@@ -92,12 +96,13 @@ check_bins()
 		case $SYSTEM in
 			macos)
 				make_target=mac
+				cf=
 				;;
 			systemd)
 				make_target=systemd
 				;;
 		esac
-		CFLAGS="-march=native ${CFLAGS}" make -C "$EXEDIR" $make_target || {
+		CFLAGS="${cf:+$cf }${CFLAGS}" make -C "$EXEDIR" $make_target || {
 			echo could not compile
 			make -C "$EXEDIR" clean
 			exitp 8
@@ -250,9 +255,9 @@ select_mode_filter()
 
 select_mode()
 {
+	select_mode_filter
 	select_mode_mode
 	select_mode_iface
-	select_mode_filter
 }
 
 select_getlist()
@@ -904,8 +909,6 @@ fix_sbin_path
 fsleep_setup
 check_system
 check_source
-
-[ "$SYSTEM" = "macos" ] && . "$EXEDIR/init.d/macos/functions"
 
 case $SYSTEM in
 	systemd)

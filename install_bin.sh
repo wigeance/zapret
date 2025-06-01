@@ -64,6 +64,12 @@ select_test_method()
 
 }
 
+disable_antivirus()
+{
+	# $1 - dir
+	[ "$UNAME" = Darwin ] && find "$dir" -maxdepth 1 -type f -perm +111 -exec xattr -d com.apple.quarantine {} \; 2>/dev/null
+}
+
 check_dir()
 {
 	local dir="$BINDIR/$1"
@@ -71,6 +77,7 @@ check_dir()
 	local out
 	if [ -f "$exe" ]; then
 		if [ -x "$exe" ]; then
+			disable_antivirus "$dir"
 			case $TEST in
 				bash)
 					out=$(echo 0.0.0.0 | bash -c "\"$exe"\" 2>/dev/null)
@@ -82,11 +89,22 @@ check_dir()
 					;;
 				elf)
 					out=$(read_elf_arch "$exe")
-					[ "$ELF_ARCH" = "$out" ]
+					[ "$ELF_ARCH" = "$out" ] && {
+						# exec test to verify it actually works. no illegal instruction or crash.
+						out=$(echo 0.0.0.0 | "$exe" 2>/dev/null)
+						[ -n "$out" ]
+					}
 					;;
 				find)
 					out=$(echo 0.0.0.0 | $FIND "$dir" -maxdepth 1 -name ip2net -exec {} \; 2>/dev/null)
 					[ -n "$out" ]
+					;;
+				run)
+					out=$(echo 0.0.0.0 | "$exe" 2>/dev/null)
+					[ -n "$out" ]
+					;;
+				*)
+					false
 					;;
 			esac
 		else
