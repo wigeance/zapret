@@ -23,6 +23,7 @@ CURL=${CURL:-curl}
 . "$ZAPRET_BASE/common/fwtype.sh"
 . "$ZAPRET_BASE/common/virt.sh"
 
+SKIP_TPWS=1
 DOMAINS_DEFAULT=${DOMAINS_DEFAULT:-rutracker.org}
 QNUM=${QNUM:-59780}
 SOCKS_PORT=${SOCKS_PORT:-1993}
@@ -40,7 +41,7 @@ CURL_MAX_TIME=${CURL_MAX_TIME:-2}
 CURL_MAX_TIME_QUIC=${CURL_MAX_TIME_QUIC:-$CURL_MAX_TIME}
 CURL_MAX_TIME_DOH=${CURL_MAX_TIME_DOH:-2}
 MIN_TTL=${MIN_TTL:-1}
-MAX_TTL=${MAX_TTL:-12}
+MAX_TTL=${MAX_TTL:-0}
 USER_AGENT=${USER_AGENT:-Mozilla}
 HTTP_PORT=${HTTP_PORT:-80}
 HTTPS_PORT=${HTTPS_PORT:-443}
@@ -1385,19 +1386,19 @@ pktws_check_domain_http_bypass_()
 			[ "$need_hostfakesplit" = 0 ] && contains "$desync" hostfakesplit && continue
 			[ "$need_fakeddisorder" = 0 ] && contains "$desync" fakeddisorder && continue
 			ok=0
-			for ttl in $ttls; do
-				# orig-ttl=1 with start/cutoff limiter drops empty ACK packet in response to SYN,ACK. it does not reach DPI or server.
-				# missing ACK is transmitted in the first data packet of TLS/HTTP proto
-				for f in '' '--orig-ttl=1 --orig-mod-start=s1 --orig-mod-cutoff=d1'; do
-					pktws_curl_test_update_vary $1 $2 $3 $desync --dpi-desync-ttl=$ttl $f $e && {
-						[ "$SCANLEVEL" = quick ] && return
-						ok=1
-						need_wssize=0
-						[ "$SCANLEVEL" = force ] || break
-					}
-				done
-				[ "$ok" = 1 ] && break
-			done
+##			for ttl in $ttls; do
+##				# orig-ttl=1 with start/cutoff limiter drops empty ACK packet in response to SYN,ACK. it does not reach DPI or server.
+##				# missing ACK is transmitted in the first data packet of TLS/HTTP proto
+##				for f in '' '--orig-ttl=1 --orig-mod-start=s1 --orig-mod-cutoff=d1'; do
+##					pktws_curl_test_update_vary $1 $2 $3 $desync --dpi-desync-ttl=$ttl $f $e && {
+##						[ "$SCANLEVEL" = quick ] && return
+##						ok=1
+##						need_wssize=0
+##						[ "$SCANLEVEL" = force ] || break
+##					}
+##				done
+##				[ "$ok" = 1 ] && break
+##			done
 			# only skip tests if TTL succeeded. do not skip if TTL failed but fooling succeeded
 			[ $ok = 1 -a "$SCANLEVEL" != force ] && {
 				[ "$desync" = fake ] && need_fake=0
@@ -1500,20 +1501,20 @@ pktws_check_domain_http_bypass_()
 			ok=0
 			# orig-ttl=1 with start/cutoff limiter drops empty ACK packet in response to SYN,ACK. it does not reach DPI or server.
 			# missing ACK is transmitted in the first data packet of TLS/HTTP proto
-			for delta in 1 2 3 4 5; do
-				for f in '' '--orig-ttl=1 --orig-mod-start=s1 --orig-mod-cutoff=d1'; do
-					pktws_curl_test_update_vary $1 $2 $3 $desync --dpi-desync-ttl=1 --dpi-desync-autottl=-$delta $f $e && ok=1
-					[ "$ok" = 1 -a "$SCANLEVEL" != force ] && break
-				done
-			done
-			[ "$SCANLEVEL" = force ] && {
-				for orig in 1 2 3; do
-					for delta in 1 2 3 4 5; do
-						pktws_curl_test_update_vary $1 $2 $3 $desync ${orig:+--orig-autottl=+$orig} --dpi-desync-ttl=1 --dpi-desync-autottl=-$delta $e && ok=1
-					done
-					[ "$ok" = 1 -a "$SCANLEVEL" != force ] && break
-				done
-			}
+##			for delta in 1 2 3 4 5; do
+##				for f in '' '--orig-ttl=1 --orig-mod-start=s1 --orig-mod-cutoff=d1'; do
+##					pktws_curl_test_update_vary $1 $2 $3 $desync --dpi-desync-ttl=1 --dpi-desync-autottl=-$delta $f $e && ok=1
+##					[ "$ok" = 1 -a "$SCANLEVEL" != force ] && break
+##				done
+##			done
+##			[ "$SCANLEVEL" = force ] && {
+##				for orig in 1 2 3; do
+##						for delta in 1 2 3 4 5; do
+##						pktws_curl_test_update_vary $1 $2 $3 $desync ${orig:+--orig-autottl=+$orig} --dpi-desync-ttl=1 --dpi-desync-autottl=-$delta $e && ok=1
+##					done
+##					[ "$ok" = 1 -a "$SCANLEVEL" != force ] && break
+##				done
+##			}
 			[ "$ok" = 1 ] &&
 			{
 				echo "WARNING ! although autottl worked it requires testing on multiple domains to find out reliable delta"
